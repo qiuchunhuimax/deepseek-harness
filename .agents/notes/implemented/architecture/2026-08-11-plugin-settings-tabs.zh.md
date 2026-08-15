@@ -12,9 +12,9 @@ Status: implemented
 
 `@deepseek-ai/dsh-client-ui-settings-plugins` 拥有唯一一个 id 为 `plugins` 的 `settings.section` 贡献。它渲染共享标题和紧凑标签栏，声明根级列表 slot `settings.plugins.tab`，并把该记录中的 id、order 与跟随语言的 label 投影成标签页。该 slot 的规范类型位于 `ui-settings`，因此标签页贡献方依赖设置领域约定，而不是依赖另一个功能插件。
 
-分区拥有方贡献 `configurable` 标签页，由它声明既有的嵌套 `settings.plugin.item` 列表。配置卡片原有的命名空间绑定、草稿状态、校验与写入均保持不变。`@deepseek-ai/dsh-client-ui-settings-plugin-inventory` 向 `settings.plugins.tab` 贡献 `all` 标签页；它的 Host Loader 观察器、生成的 Remote 命名空间、DTO 与搜索语义保持不变。已停用的清单条目会在摘要和详情中省略重复的“未挂载”运行状态，已启用条目仍显示其 Cordis 阶段。
+分区拥有方贡献 `configurable` 标签页，由它声明既有的嵌套 `settings.plugin.item` 列表。配置卡片原有的命名空间绑定、草稿状态、校验与写入均保持不变。`@deepseek-ai/dsh-client-ui-settings-plugin-inventory` 向 `settings.plugins.tab` 贡献 `custom` 与 `all` 标签页；两者读取同一个保持不变的 Host Loader 观察器、生成 Remote 命名空间和 DTO。自建投影只包含模块名以本地开发约定 `@dsh-external/` 开头的条目，完整投影则保留全部清单，两者都保留本地搜索。已停用的清单条目会在摘要和详情中省略重复的“未挂载”运行状态，已启用条目仍显示其 Cordis 阶段。
 
-默认选择顺序中的第一个标签页。某个标签页只有首次被选择时才挂载，之后在“插件”分区保持挂载期间只隐藏而不卸载。这样会把清单 RPC 延迟到用户打开**插件列表**时，并在切换标签页时保留草稿、搜索文本、折叠状态和已读取的快照。关闭 Settings 会卸载该分区，因此再次打开后，重新选择该标签页时会取得新的清单快照。
+默认选择顺序中的第一个标签页。某个标签页只有首次被选择时才挂载，之后在“插件”分区保持挂载期间只隐藏而不卸载。这样会把各自的清单 RPC 延迟到用户打开**自建插件**或**插件列表**时，并在切换标签页时保留草稿、各标签页的搜索文本、折叠状态和已读取快照。关闭 Settings 会卸载该分区，因此再次打开后，选择任一清单标签页时都会取得新的清单快照。
 
 两项注册都使用 `ctx.slots.inject()`。分区声明方卸载时，标签 slot 及其全部贡献随之折叠；重新声明后，每项功能都能重新注册，无需静态 import，也不依赖激活顺序。
 
@@ -24,13 +24,15 @@ Status: implemented
 
 **把清单组件 import 进 `ui-settings-plugins`。** 否决，因为配置插件会因此拥有另一个插件的 Remote 依赖与生命周期，也会把可选的浏览器贡献变成包级依赖。
 
-**在分区拥有方硬编码两个标签页的名称和组件。** 否决，因为第三项功能需要修改拥有方，HMR teardown 也可能留下已不存在贡献的界面框架。slot 记录已经提供标识、顺序、本地化与级联语义。
+**在分区拥有方硬编码标签页名称和组件。** 否决，因为新增功能需要修改拥有方，HMR teardown 也可能留下已不存在贡献的界面框架。slot 记录已经提供标识、顺序、本地化与级联语义。
+
+**根据安装路径或 Git 规格推断本地所有权。** 否决，因为 Loader 清单并不拥有包管理器来源信息，把这些信息加入 Host DTO 会让只读运行时投影耦合到某一种安装机制。明确的 `@dsh-external/` 命名空间直接使用 Loader 已公开的稳定模块标识。
 
 **把“插件”聚合移入 `ui-settings-general`。** 否决，因为 Settings 外壳拥有通用导航与模态界面框架，而不拥有功能内容。把“插件”专属标签页放在那里，会让今后每一种“插件”视图都需要修改外壳。
 
 ## 影响
 
-Settings 只有一行“插件”导航，排在“Agent 预设”之前，包含**插件配置**与**插件列表**两个标签页。“Agent 预设”仍是独立分区，因为它编辑每个会话的 agent 组装，而非实时 Host Loader 树。
+Settings 只有一行“插件”导航，排在“Agent 预设”之前，包含**插件配置**、**自建插件**与**插件列表**三个标签页。“Agent 预设”仍是独立分区，因为它编辑每个会话的 agent 组装，而非实时 Host Loader 树。
 
 功能所有权保持明确：`ui-settings-plugins` 拥有“插件”页面与可编辑卡片，`ui-settings-plugin-inventory` 拥有只读清单视图，Host／RPC 路径不变。新的“插件”视图只需注册一个 `settings.plugins.tab` 贡献即可加入。
 

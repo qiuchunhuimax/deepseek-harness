@@ -3,12 +3,16 @@
 /** Simplified Chinese dictionary and key source of truth. */
 export const zh = {
   tab: '插件列表',
+  customTab: '自建插件',
   loading: '正在读取插件…',
   error: '暂时无法读取插件。',
   retry: '重试',
   search: '搜索插件',
   catalog: '插件列表',
+  customCatalog: '自建插件',
+  customIntro: '显示使用 @dsh-external/ 命名空间加载的自建插件。',
   empty: '暂无插件。',
+  customEmpty: '暂无自建插件。使用 @dsh-external/ 命名空间安装后会显示在这里。',
   emptySearch: '没有匹配的插件。',
   enabledTag: '已启用',
   disabledTag: '已停用',
@@ -28,12 +32,16 @@ export type PluginInventoryLocaleKey = keyof typeof zh
 /** English dictionary checked against the Chinese key set. */
 export const en = {
   tab: 'Plugin list',
+  customTab: 'Custom plugins',
   loading: 'Reading plugins…',
   error: 'Plugins are temporarily unavailable.',
   retry: 'Retry',
   search: 'Search plugins',
   catalog: 'Plugin list',
+  customCatalog: 'Custom plugins',
+  customIntro: 'Shows locally-authored plugins loaded from the @dsh-external/ namespace.',
   empty: 'No plugins are available.',
+  customEmpty: 'No custom plugins are available. Install one under the @dsh-external/ namespace to show it here.',
   emptySearch: 'No matching plugins.',
   enabledTag: 'Enabled',
   disabledTag: 'Disabled',

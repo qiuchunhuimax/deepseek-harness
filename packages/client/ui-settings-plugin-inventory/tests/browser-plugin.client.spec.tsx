@@ -47,23 +47,33 @@ describe('ui-settings-plugin-inventory browser plugin', () => {
     expect(inject).toEqual(['slots', 'locale', 'remote', 'remote.pluginInventory'])
   })
 
-  it('registers a localized tab without reading the Remote eagerly', async () => {
+  it('registers localized custom and complete tabs without reading the Remote eagerly', async () => {
     const b = await bench()
     declare(b.slots)
     await b.ctx.plugin({ inject: [...inject], apply }).await()
 
-    const entry = b.slots.entries('settings.plugins.tab')[0]!
-    expect(entry.component).toBe(PluginInventorySettingsTab)
-    expect(entry.options).toMatchObject({ id: 'all', order: 10 })
-    expect(entry.locale).toBe(NS)
-    expect(resolveSlotLabel(entry.options.label)).toBe('插件列表')
+    const entries = b.slots.entries('settings.plugins.tab')
+    expect(entries).toHaveLength(2)
+    const custom = entries.find(entry => entry.options.id === 'custom')!
+    const all = entries.find(entry => entry.options.id === 'all')!
+    expect(custom.component).toBe(PluginInventorySettingsTab)
+    expect(custom.options).toMatchObject({ id: 'custom', order: 10 })
+    expect(custom.locale).toBe(NS)
+    expect(resolveSlotLabel(custom.options.label)).toBe('自建插件')
+    expect(all.component).toBe(PluginInventorySettingsTab)
+    expect(all.options).toMatchObject({ id: 'all', order: 20 })
+    expect(all.locale).toBe(NS)
+    expect(resolveSlotLabel(all.options.label)).toBe('插件列表')
     expect(b.list).not.toHaveBeenCalled()
 
-    const injected = (entry.inject as unknown as () => PluginInventorySettingsTabInjected)()
-    await expect(injected.list()).resolves.toEqual(EMPTY)
+    const customInjected = (custom.inject as unknown as () => PluginInventorySettingsTabInjected)()
+    const allInjected = (all.inject as unknown as () => PluginInventorySettingsTabInjected)()
+    expect(customInjected.view).toBe('custom')
+    expect(allInjected.view).toBe('all')
+    await expect(customInjected.list()).resolves.toEqual(EMPTY)
     expect(b.list).toHaveBeenCalledOnce()
     b.list.mockResolvedValueOnce({ ok: false, error: { code: 'REMOTE_ERROR', message: 'unavailable' } })
-    await expect(injected.list()).rejects.toThrow('pluginInventory.list failed: REMOTE_ERROR: unavailable')
+    await expect(customInjected.list()).rejects.toThrow('pluginInventory.list failed: REMOTE_ERROR: unavailable')
     await b.ctx.fiber.dispose()
   })
 
@@ -74,15 +84,16 @@ describe('ui-settings-plugin-inventory browser plugin', () => {
     expect(b.slots.entries('settings.plugins.tab')).toHaveLength(0)
 
     const stop = declare(b.slots)
-    await vi.waitFor(() => { expect(b.slots.entries('settings.plugins.tab')).toHaveLength(1) })
+    await vi.waitFor(() => { expect(b.slots.entries('settings.plugins.tab')).toHaveLength(2) })
     b.locale.setLocale('en')
-    expect(resolveSlotLabel(b.slots.entries('settings.plugins.tab')[0]!.options.label)).toBe('Plugin list')
+    expect(b.slots.entries('settings.plugins.tab').map(entry => resolveSlotLabel(entry.options.label)))
+      .toEqual(['Custom plugins', 'Plugin list'])
 
     stop()
     expect(b.slots.entries('settings.plugins.tab')).toHaveLength(0)
     declare(b.slots)
     await vi.waitFor(() => {
-      expect(b.slots.entries('settings.plugins.tab')[0]?.component).toBe(PluginInventorySettingsTab)
+      expect(b.slots.entries('settings.plugins.tab')).toHaveLength(2)
     })
 
     await fiber.dispose()

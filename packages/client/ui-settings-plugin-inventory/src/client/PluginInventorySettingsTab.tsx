@@ -12,7 +12,12 @@ import css from './PluginInventorySettingsTab.module.css'
 export interface PluginInventorySettingsTabInjected {
   /** Read a current Host inventory snapshot. */
   list: () => Promise<PluginInventorySnapshot>
+  /** Select the full Loader inventory or only locally-authored packages. */
+  view: PluginInventoryView
 }
+
+/** Inventory projection selected by one Settings tab contribution. */
+export type PluginInventoryView = 'all' | 'custom'
 
 type PluginInventoryEntry = PluginInventorySnapshot['entries'][number]
 type PluginFiberPhase = PluginInventoryEntry['fiberPhase']
@@ -60,8 +65,13 @@ function matches(entry: PluginInventoryEntry, normalizedQuery: string): boolean 
     .some(value => value.toLocaleLowerCase().includes(normalizedQuery))
 }
 
+/** Whether a Loader entry follows the local package namespace convention. */
+function isCustomPlugin(entry: PluginInventoryEntry): boolean {
+  return entry.moduleName.startsWith('@dsh-external/')
+}
+
 /** Render the read-only current Loader inventory. */
-export function PluginInventorySettingsTab({ list, t }: PluginInventorySettingsTabProps): ReactNode {
+export function PluginInventorySettingsTab({ list, t, view }: PluginInventorySettingsTabProps): ReactNode {
   const catalogId = useId()
   const [request, setRequest] = useState(0)
   const [query, setQuery] = useState('')
@@ -78,11 +88,15 @@ export function PluginInventorySettingsTab({ list, t }: PluginInventorySettingsT
   }, [list, request])
 
   const normalizedQuery = query.trim().toLocaleLowerCase()
-  const filteredEntries = useMemo(
+  const visibleEntries = useMemo(
     () => state.status === 'ready'
-      ? state.snapshot.entries.filter(entry => matches(entry, normalizedQuery))
+      ? state.snapshot.entries.filter(entry => view === 'all' || isCustomPlugin(entry))
       : [],
-    [normalizedQuery, state],
+    [state, view],
+  )
+  const filteredEntries = useMemo(
+    () => visibleEntries.filter(entry => matches(entry, normalizedQuery)),
+    [normalizedQuery, visibleEntries],
   )
 
   useEffect(() => {
@@ -107,6 +121,7 @@ export function PluginInventorySettingsTab({ list, t }: PluginInventorySettingsT
       ) : null}
       {state.status === 'ready' ? (
         <div className={css.catalog}>
+          {view === 'custom' ? <p className={css.status}>{t('customIntro')}</p> : null}
           <label className={css.search}>
             <IconSearchOutline16 aria-hidden="true" />
             <span className={css.visuallyHidden}>{t('search')}</span>
@@ -119,11 +134,13 @@ export function PluginInventorySettingsTab({ list, t }: PluginInventorySettingsT
             />
           </label>
           <div className={css.catalogHeading}>
-            <h3>{t('catalog')}</h3>
+            <h3>{t(view === 'custom' ? 'customCatalog' : 'catalog')}</h3>
             <span data-plugin-count={filteredEntries.length}>{filteredEntries.length}</span>
           </div>
-          {state.snapshot.entries.length === 0 ? <p className={css.status}>{t('empty')}</p> : null}
-          {state.snapshot.entries.length > 0 && filteredEntries.length === 0
+          {visibleEntries.length === 0
+            ? <p className={css.status}>{t(view === 'custom' ? 'customEmpty' : 'empty')}</p>
+            : null}
+          {visibleEntries.length > 0 && filteredEntries.length === 0
             ? <p className={css.status}>{t('emptySearch')}</p>
             : null}
           {filteredEntries.length > 0 ? (

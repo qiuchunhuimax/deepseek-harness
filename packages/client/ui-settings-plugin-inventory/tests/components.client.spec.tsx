@@ -5,6 +5,7 @@ import { PluginInventorySettingsTab } from '../src/client/PluginInventorySetting
 import type {
   PluginInventorySettingsTabInjected,
   PluginInventorySettingsTabProps,
+  PluginInventoryView,
 } from '../src/client/PluginInventorySettingsTab.tsx'
 import { en, type PluginInventoryLocaleKey } from '../src/client/locales.ts'
 
@@ -13,10 +14,14 @@ afterEach(cleanup)
 type Snapshot = Awaited<ReturnType<PluginInventorySettingsTabInjected['list']>>
 const t = ((key: PluginInventoryLocaleKey): string => en[key]) as PluginInventorySettingsTabProps['t']
 
-function props(list: PluginInventorySettingsTabInjected['list']): PluginInventorySettingsTabProps {
+function props(
+  list: PluginInventorySettingsTabInjected['list'],
+  view: PluginInventoryView = 'all',
+): PluginInventorySettingsTabProps {
   return {
     t,
     list,
+    view,
   } as PluginInventorySettingsTabProps
 }
 
@@ -29,6 +34,8 @@ const SNAPSHOT = {
     { entryId: 'unloading', moduleName: '@fixture/unloading-name', enabled: true, fiberPhase: 'unloading' },
     { entryId: 'unobserved', moduleName: '@fixture/unobserved-name', enabled: true, fiberPhase: null },
     { entryId: 'disabled-entry', moduleName: '@deepseek-ai/dsh-host-directory-picker-native', enabled: false, fiberPhase: null },
+    { entryId: 'custom-ocr', moduleName: '@dsh-external/dsh-paddle-ocr', enabled: true, fiberPhase: 'active' },
+    { entryId: 'custom-skin', moduleName: '@dsh-external/dsh-client-ui-skin-pokemon', enabled: false, fiberPhase: null },
   ],
 } as unknown as Snapshot
 
@@ -43,10 +50,10 @@ describe('PluginInventorySettingsTab', () => {
     expect(list).toHaveBeenCalledOnce()
     expect(screen.getByRole('searchbox', { name: en.search })).toBeTruthy()
     expect(screen.getByRole('heading', { name: en.catalog })).toBeTruthy()
-    expect(view.container.querySelector('[data-plugin-count]')?.textContent).toBe('7')
-    expect(screen.getAllByRole('listitem')).toHaveLength(7)
-    expect(screen.getAllByText(en.enabledTag)).toHaveLength(6)
-    expect(screen.getByText(en.disabledTag)).toBeTruthy()
+    expect(view.container.querySelector('[data-plugin-count]')?.textContent).toBe('9')
+    expect(screen.getAllByRole('listitem')).toHaveLength(9)
+    expect(screen.getAllByText(en.enabledTag)).toHaveLength(7)
+    expect(screen.getAllByText(en.disabledTag)).toHaveLength(2)
     for (const value of [
       'Mounted',
       'Waiting for dependencies',
@@ -55,7 +62,7 @@ describe('PluginInventorySettingsTab', () => {
       'Unloading',
       'Not mounted',
     ]) {
-      expect(screen.getByRole('img', { name: value })).toBeTruthy()
+      expect(screen.getAllByRole('img', { name: value }).length).toBeGreaterThan(0)
     }
     const active = screen.getByRole('button', { name: 'hmr, Mounted, Enabled' })
     expect(active.getAttribute('aria-expanded')).toBe('false')
@@ -93,6 +100,35 @@ describe('PluginInventorySettingsTab', () => {
     fireEvent.change(search, { target: { value: 'not-a-plugin' } })
     expect(screen.queryAllByRole('listitem')).toHaveLength(0)
     expect(screen.getByText(en.emptySearch)).toBeTruthy()
+  })
+
+  it('projects only @dsh-external packages in the custom view', async () => {
+    const view = render(<PluginInventorySettingsTab {...props(async () => SNAPSHOT, 'custom')} />)
+    const search = await screen.findByRole('searchbox', { name: en.search })
+
+    expect(screen.getByText(en.customIntro)).toBeTruthy()
+    expect(screen.getByRole('heading', { name: en.customCatalog })).toBeTruthy()
+    expect(view.container.querySelector('[data-plugin-count]')?.textContent).toBe('2')
+    expect(screen.getAllByRole('listitem')).toHaveLength(2)
+    expect(screen.getByText('paddle-ocr')).toBeTruthy()
+    expect(screen.getByText('ui-skin-pokemon')).toBeTruthy()
+    expect(screen.queryByText('hmr')).toBeNull()
+
+    fireEvent.change(search, { target: { value: 'pokemon' } })
+    expect(screen.getAllByRole('listitem')).toHaveLength(1)
+    fireEvent.change(search, { target: { value: 'deepseek-ai' } })
+    expect(screen.queryAllByRole('listitem')).toHaveLength(0)
+    expect(screen.getByText(en.emptySearch)).toBeTruthy()
+  })
+
+  it('shows the custom empty state when only built-in plugins exist', async () => {
+    const builtIns = {
+      entries: SNAPSHOT.entries.filter(entry => !entry.moduleName.startsWith('@dsh-external/')),
+    } as Snapshot
+    render(<PluginInventorySettingsTab {...props(async () => builtIns, 'custom')} />)
+
+    expect(await screen.findByText(en.customEmpty)).toBeTruthy()
+    expect(screen.queryByText(en.empty)).toBeNull()
   })
 
   it('shows a generic failure and retries into the empty state', async () => {

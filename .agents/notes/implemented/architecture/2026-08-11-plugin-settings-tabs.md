@@ -12,9 +12,9 @@ Plugin configuration and the read-only Loader inventory each registered a top-le
 
 `@deepseek-ai/dsh-client-ui-settings-plugins` owns the single `settings.section` contribution with id `plugins`. It renders the shared title and compact tab chrome, declares the root-scoped list slot `settings.plugins.tab`, and projects that ledger's id, order, and locale-following label into its tabs. The slot's canonical type lives in `ui-settings`, so a tab contributor depends on the Settings domain contract rather than on another feature plugin.
 
-The section owner contributes a `configurable` tab that declares the existing nested `settings.plugin.item` list. Configuration cards keep their namespace bindings, draft state, validation, and writes unchanged. `@deepseek-ai/dsh-client-ui-settings-plugin-inventory` contributes an `all` tab to `settings.plugins.tab`; its Host Loader observer, generated Remote namespace, DTO, and search semantics remain unchanged. Disabled inventory entries omit the redundant unmounted runtime state from summaries and details, while enabled entries continue to expose their Cordis phase.
+The section owner contributes a `configurable` tab that declares the existing nested `settings.plugin.item` list. Configuration cards keep their namespace bindings, draft state, validation, and writes unchanged. `@deepseek-ai/dsh-client-ui-settings-plugin-inventory` contributes `custom` and `all` tabs to `settings.plugins.tab`; both read the same unchanged Host Loader observer, generated Remote namespace, and DTO. The custom projection includes only module names beginning with the local authoring convention `@dsh-external/`, while the all projection preserves the complete inventory and both retain local search. Disabled inventory entries omit the redundant unmounted runtime state from summaries and details, while enabled entries continue to expose their Cordis phase.
 
-The first ordered tab is selected by default. A tab mounts only when first selected and then remains mounted but hidden while the Plugins section stays mounted. This delays the inventory RPC until the user opens **Plugin list** and preserves drafts, search text, disclosure state, and the fetched snapshot while switching tabs. Closing Settings unmounts the section, so reopening it obtains a fresh inventory snapshot when that tab is selected again.
+The first ordered tab is selected by default. A tab mounts only when first selected and then remains mounted but hidden while the Plugins section stays mounted. This delays each inventory RPC until the user opens **Custom plugins** or **Plugin list** and preserves drafts, per-tab search text, disclosure state, and fetched snapshots while switching tabs. Closing Settings unmounts the section, so reopening it obtains a fresh inventory snapshot when an inventory tab is selected again.
 
 Both registrations use `ctx.slots.inject()`. If the section declarer unloads, the tab declaration and every contribution collapse with it; redeclaration lets each feature re-register without a static import or activation-order dependency.
 
@@ -24,13 +24,15 @@ Both registrations use `ctx.slots.inject()`. If the section declarer unloads, th
 
 **Import the inventory component into `ui-settings-plugins`.** Rejected because the configuration plugin would then own another plugin's Remote dependency and lifecycle. It would also turn an optional browser contribution into a package-level dependency.
 
-**Hard-code the two tab labels and components in the section owner.** Rejected because a third feature would require editing the owner, and HMR teardown could leave chrome for a contribution that no longer exists. The slot ledger already provides identity, ordering, localization, and cascade semantics.
+**Hard-code tab labels and components in the section owner.** Rejected because a new feature would require editing the owner, and HMR teardown could leave chrome for a contribution that no longer exists. The slot ledger already provides identity, ordering, localization, and cascade semantics.
+
+**Infer local ownership from install paths or Git specifications.** Rejected because the Loader inventory does not own package-manager provenance, and adding it to the Host DTO would couple a read-only runtime projection to one installation mechanism. The explicit `@dsh-external/` namespace is stable at the module identity already exposed by the Loader.
 
 **Move Plugins aggregation into `ui-settings-general`.** Rejected because the Settings shell owns generic navigation and modal chrome, not feature content. Adding Plugins-specific tabs there would make every future Plugins view a shell change.
 
 ## Consequences
 
-Settings has one Plugins navigation row, ordered before Agent Presets, with **Plugin configuration** and **Plugin list** tabs. Agent Presets remains an independent section because it edits per-session agent compositions rather than the live Host Loader tree.
+Settings has one Plugins navigation row, ordered before Agent Presets, with **Plugin configuration**, **Custom plugins**, and **Plugin list** tabs. Agent Presets remains an independent section because it edits per-session agent compositions rather than the live Host Loader tree.
 
 Feature ownership remains explicit: `ui-settings-plugins` owns the Plugins page and editable cards, `ui-settings-plugin-inventory` owns the read-only inventory view, and the Host/RPC path does not change. A new Plugins view can join by registering one `settings.plugins.tab` contribution.
 
