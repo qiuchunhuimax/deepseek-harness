@@ -17,10 +17,12 @@ const t = ((key: PluginInventoryLocaleKey): string => en[key]) as PluginInventor
 function props(
   list: PluginInventorySettingsTabInjected['list'],
   view: PluginInventoryView = 'all',
+  setEnabled: PluginInventorySettingsTabInjected['setEnabled'] = vi.fn(),
 ): PluginInventorySettingsTabProps {
   return {
     t,
     list,
+    setEnabled,
     view,
   } as PluginInventorySettingsTabProps
 }
@@ -52,8 +54,6 @@ describe('PluginInventorySettingsTab', () => {
     expect(screen.getByRole('heading', { name: en.catalog })).toBeTruthy()
     expect(view.container.querySelector('[data-plugin-count]')?.textContent).toBe('9')
     expect(screen.getAllByRole('listitem')).toHaveLength(9)
-    expect(screen.getAllByText(en.enabledTag)).toHaveLength(7)
-    expect(screen.getAllByText(en.disabledTag)).toHaveLength(2)
     for (const value of [
       'Mounted',
       'Waiting for dependencies',
@@ -80,7 +80,7 @@ describe('PluginInventorySettingsTab', () => {
     })
     expect(view.container.querySelector('[data-loader-entry]')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'directory-picker-native, Disabled' }))
-    expect(screen.getAllByText(en.disabledTag)).toHaveLength(2)
+    expect(screen.getAllByText(en.disabledTag)).toHaveLength(1)
     expect(screen.queryByText(en.cordis)).toBeNull()
     expect(screen.queryByText(en.unobserved)).toBeNull()
   })
@@ -145,6 +145,88 @@ describe('PluginInventorySettingsTab', () => {
     fireEvent.click(screen.getByRole('button', { name: en.retry }))
     await waitFor(() => { expect(list).toHaveBeenCalledTimes(2) })
     expect(await screen.findByText(en.empty)).toBeTruthy()
+  })
+
+  it('toggles a plugin on click and adopts the returned snapshot', async () => {
+    const toggled = {
+      entries: SNAPSHOT.entries.map(entry => entry.entryId === '8a1b2c3d' ? { ...entry, enabled: false, fiberPhase: null } : entry),
+    } as unknown as Snapshot
+    const setEnabled = vi.fn<PluginInventorySettingsTabInjected['setEnabled']>()
+      .mockResolvedValue({ ok: true, value: toggled })
+    render(<PluginInventorySettingsTab {...props(async () => SNAPSHOT, 'all', setEnabled)} />)
+
+    const toggle = await screen.findByRole('switch', { name: 'Disable hmr' })
+    expect(toggle.getAttribute('aria-checked')).toBe('true')
+    fireEvent.click(toggle)
+    expect(setEnabled).toHaveBeenCalledWith('8a1b2c3d', false)
+
+    await waitFor(() => {
+      expect(screen.getByRole('switch', { name: 'Enable hmr' }).getAttribute('aria-checked')).toBe('false')
+    })
+  })
+
+  it('marks a toggle pending while in flight and disables it against a second click', async () => {
+    const deferred = Promise.withResolvers<Awaited<ReturnType<PluginInventorySettingsTabInjected['setEnabled']>>>()
+    const setEnabled = vi.fn<PluginInventorySettingsTabInjected['setEnabled']>(() => deferred.promise)
+    render(<PluginInventorySettingsTab {...props(async () => SNAPSHOT, 'all', setEnabled)} />)
+
+    const toggle = await screen.findByRole('switch', { name: 'Disable hmr' })
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('data-pending')).toBe('true')
+    fireEvent.click(toggle)
+    expect(setEnabled).toHaveBeenCalledOnce()
+
+    await act(async () => { deferred.resolve({ ok: true, value: SNAPSHOT }) })
+    expect(toggle.getAttribute('data-pending')).toBeNull()
+  })
+
+  it('shows an inline message and keeps the prior state when the Host rejects a toggle', async () => {
+    const setEnabled = vi.fn<PluginInventorySettingsTabInjected['setEnabled']>()
+      .mockResolvedValue({ ok: false, error: { code: 'protected' } })
+    render(<PluginInventorySettingsTab {...props(async () => SNAPSHOT, 'all', setEnabled)} />)
+
+    const toggle = await screen.findByRole('switch', { name: 'Disable hmr' })
+    fireEvent.click(toggle)
+
+    expect(await screen.findByText(en.toggleErrorProtected)).toBeTruthy()
+    expect(toggle.getAttribute('aria-checked')).toBe('true')
+  })
+
+  it('shows a transport-failure message when the injected call itself rejects', async () => {
+    const setEnabled = vi.fn<PluginInventorySettingsTabInjected['setEnabled']>()
+      .mockRejectedValue(new Error('private transport detail'))
+    render(<PluginInventorySettingsTab {...props(async () => SNAPSHOT, 'all', setEnabled)} />)
+
+    const toggle = await screen.findByRole('switch', { name: 'Disable hmr' })
+    fireEvent.click(toggle)
+
+    expect(await screen.findByText(en.toggleErrorTransport)).toBeTruthy()
+    expect(screen.queryByText('private transport detail')).toBeNull()
+  })
+
+  it('toggles a nested-shaped entry id (a real production row) like any other', async () => {
+    // A real deployment's plugin ids are nested at least one level (the
+    // running app's own patch-file Include), so the switch must not treat a
+    // `:`-containing entryId as unsupported.
+    const nestedShaped = {
+      entries: [
+        { entryId: 'include:paddle-ocr', moduleName: '@dsh-external/dsh-paddle-ocr', enabled: true, fiberPhase: 'active' },
+      ],
+    } as unknown as Snapshot
+    const toggled = {
+      entries: [{ ...nestedShaped.entries[0], enabled: false, fiberPhase: null }],
+    } as unknown as Snapshot
+    const setEnabled = vi.fn<PluginInventorySettingsTabInjected['setEnabled']>()
+      .mockResolvedValue({ ok: true, value: toggled })
+    render(<PluginInventorySettingsTab {...props(async () => nestedShaped, 'all', setEnabled)} />)
+
+    const toggle = await screen.findByRole('switch', { name: 'Disable paddle-ocr' })
+    expect((toggle as HTMLButtonElement).disabled).toBe(false)
+    fireEvent.click(toggle)
+    expect(setEnabled).toHaveBeenCalledWith('include:paddle-ocr', false)
+    await waitFor(() => {
+      expect(screen.getByRole('switch', { name: 'Enable paddle-ocr' }).getAttribute('aria-checked')).toBe('false')
+    })
   })
 
   it('contains a synchronous Remote failure and ignores a result after unmount', async () => {

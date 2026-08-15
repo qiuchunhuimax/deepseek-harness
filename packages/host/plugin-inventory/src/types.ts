@@ -26,3 +26,23 @@ export interface PluginInventoryEntry {
 export interface PluginInventorySnapshot {
   readonly entries: readonly PluginInventoryEntry[]
 }
+
+/** Request to change one entry's persisted enablement. */
+export interface SetPluginEnabledRequest {
+  readonly entryId: PluginEntryId
+  readonly enabled: boolean
+}
+
+/** Reason a {@link SetPluginEnabledRequest} was rejected without an exception. */
+export type SetPluginEnabledFailure =
+  /** No Loader entry with this id is currently mounted. */
+  | { readonly code: 'not-found' }
+  /** Disabling this id would break the web server or the Settings UI itself. */
+  | { readonly code: 'protected' }
+  /** This composition has no writable profile patch layer to persist the change into. */
+  | { readonly code: 'no-patch-layer' }
+
+/** Outcome of one {@link SetPluginEnabledRequest}. */
+export type SetPluginEnabledResult =
+  | { readonly ok: true; readonly value: PluginInventorySnapshot }
+  | { readonly ok: false; readonly error: SetPluginEnabledFailure }

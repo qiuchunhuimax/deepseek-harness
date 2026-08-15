@@ -25,8 +25,19 @@ declare module '@deepseek-ai/cordis' {
   interface Context {
     /** Harness-home path resolver available to Loader `!!js` config expressions. */
     dshHomePath?: typeof dshHomePath
+    /**
+     * Absolute path of the booted profile's own `cordis.patch.yml`, the file
+     * {@link watchUserPatches} watches for this run. Absent in compositions
+     * the product CLI did not boot (e.g. a bare test harness), so a plugin
+     * that persists a patch edit must treat a missing value as "no writable
+     * profile layer available" rather than guessing a path.
+     */
+    dshProfilePatchPath?: string
   }
 }
+
+/** Context slot the launcher fills with the booted profile's patch-file path. */
+export const DSH_PROFILE_PATCH_PATH_KEY = 'dshProfilePatchPath'
 
 export {
   composeEntries,

@@ -42,7 +42,16 @@ export function apply(ctx: ClientContext): void {
     }
     return result.value
   }
-  const injected = (view: PluginInventoryView): PluginInventorySettingsTabInjected => ({ list, view })
+  const setEnabled: PluginInventorySettingsTabInjected['setEnabled'] = async (entryId, enabled) => {
+    const result = await ctx.remote.pluginInventory.setEnabled({ entryId, enabled })
+    if (!result.ok) {
+      throw new Error(`pluginInventory.setEnabled failed: ${result.error.code}: ${result.error.message}`)
+    }
+    // The transport succeeded; the Host's own typed business outcome (an
+    // explicit rejection, not an exception) is the component's to render.
+    return result.value
+  }
+  const injected = (view: PluginInventoryView): PluginInventorySettingsTabInjected => ({ list, setEnabled, view })
 
   ctx.slots.inject('settings.plugins.tab', function* () {
     yield ctx.slots.register({

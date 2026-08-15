@@ -24,6 +24,12 @@ export const zh = {
   active: '已挂载',
   failed: '挂载失败',
   unloading: '卸载中',
+  toggleOn: '启用',
+  toggleOff: '停用',
+  toggleErrorNotFound: '未能启停：找不到该插件。',
+  toggleErrorProtected: '未能停用：停用它会导致网页或设置面板本身无法使用。',
+  toggleErrorNoPatchLayer: '未能启停：当前部署没有可写入的 profile 配置层。',
+  toggleErrorTransport: '未能启停：与服务端通信失败，请重试。',
 } satisfies Record<string, string>
 
 /** Plugin inventory locale key union. */
@@ -53,4 +59,10 @@ export const en = {
   active: 'Mounted',
   failed: 'Mount failed',
   unloading: 'Unloading',
+  toggleOn: 'Enable',
+  toggleOff: 'Disable',
+  toggleErrorNotFound: "Couldn't toggle: no matching plugin.",
+  toggleErrorProtected: "Couldn't disable: doing so would break the web page or Settings itself.",
+  toggleErrorNoPatchLayer: "Couldn't toggle: this deployment has no writable profile patch layer.",
+  toggleErrorTransport: "Couldn't toggle: request to the server failed. Try again.",
 } satisfies Record<PluginInventoryLocaleKey, string>

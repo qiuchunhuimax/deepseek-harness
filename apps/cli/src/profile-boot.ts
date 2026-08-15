@@ -20,6 +20,7 @@ import type { EntryOptions } from '@deepseek-ai/cordis-plugin-loader'
 import {
   boot,
   composeEntries,
+  DSH_PROFILE_PATCH_PATH_KEY,
   healProfilesModuleFallback,
   installFailLoud,
   loadOptionalPatches,
@@ -256,6 +257,10 @@ export async function runProfile(options: RunProfileOptions): Promise<{ ctx: Con
       args: options.args,
       exit: code => void shutdown.shutdown(code),
     })
+    // The profile's own patch-file path, so a plugin that persists a Loader
+    // entry edit (e.g. an enable/disable toggle) writes the exact file
+    // `watchUserPatches` below watches, instead of guessing at a layout.
+    hostCtx.provide(DSH_PROFILE_PATCH_PATH_KEY, composed.profile.patchPath)
   })
   app.current = ctx
   // A surface can dispose the whole tree while boot or this post-boot watcher

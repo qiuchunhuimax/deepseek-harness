@@ -127,11 +127,26 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
   width: 100%;
   min-height: 52px;
-  border: 0;
   padding: 12px 14px;
+  color: inherit;
+}
+
+.card[data-open='true'] > .cardContent {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.cardExpandButton {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  border: 0;
+  padding: 0;
   background: transparent;
   color: inherit;
   font: inherit;
@@ -139,14 +154,73 @@
   cursor: pointer;
 }
 
-.cardContent:hover,
-.card[data-open='true'] > .cardContent {
-  background: var(--dsw-alias-interactive-bg-hover);
+.cardExpandButton:hover {
+  color: var(--dsw-alias-label-primary);
 }
 
-.cardContent:focus-visible {
+.cardExpandButton:focus-visible {
   outline: 2px solid var(--dsw-alias-state-business-primary);
-  outline-offset: -2px;
+  outline-offset: 2px;
+}
+
+.toggle {
+  flex: none;
+  border: 0;
+  padding: 4px 2px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.toggle[data-pending='true'] {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--dsw-alias-state-business-primary);
+  outline-offset: 2px;
+}
+
+.toggleTrack {
+  position: relative;
+  display: inline-block;
+  width: 26px;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--dsw-alias-border-l2);
+  transition: background-color 120ms var(--ds-ease-in-out);
+}
+
+.toggleThumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--dsw-alias-bg-layer-1);
+  transition: transform 120ms var(--ds-ease-in-out);
+}
+
+.toggleTrack[data-on='true'] {
+  background: var(--dsw-alias-state-success-primary);
+}
+
+.toggleTrack[data-on='true'] .toggleThumb {
+  transform: translateX(12px);
+}
+
+.toggleError {
+  margin: 0;
+  padding: 0 14px 10px;
+  color: var(--dsw-alias-state-error-primary);
+  font-size: 11px;
+  line-height: 16px;
 }
 
 .cardTitle {
