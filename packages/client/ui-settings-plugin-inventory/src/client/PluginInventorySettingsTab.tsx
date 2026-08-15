@@ -65,9 +65,19 @@ function matches(entry: PluginInventoryEntry, normalizedQuery: string): boolean 
     .some(value => value.toLocaleLowerCase().includes(normalizedQuery))
 }
 
-/** Whether a Loader entry follows the local package namespace convention. */
+/**
+ * Whether a Loader entry ships as part of the official `@deepseek-ai/`
+ * catalog. `cordis:include` is the one framework primitive the official
+ * `@deepseek-ai/dsh-base` bundle inserts under its own unscoped Cordis name
+ * rather than an `@deepseek-ai/` package name.
+ */
+function isOfficialPlugin(entry: PluginInventoryEntry): boolean {
+  return entry.moduleName.startsWith('@deepseek-ai/') || entry.moduleName === 'cordis:include'
+}
+
+/** Whether a Loader entry falls outside the official `@deepseek-ai/` catalog. */
 function isCustomPlugin(entry: PluginInventoryEntry): boolean {
-  return entry.moduleName.startsWith('@dsh-external/')
+  return !isOfficialPlugin(entry)
 }
 
 /** Render the read-only current Loader inventory. */

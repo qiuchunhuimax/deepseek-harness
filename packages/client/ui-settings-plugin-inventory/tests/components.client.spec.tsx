@@ -102,17 +102,20 @@ describe('PluginInventorySettingsTab', () => {
     expect(screen.getByText(en.emptySearch)).toBeTruthy()
   })
 
-  it('projects only @dsh-external packages in the custom view', async () => {
+  it('projects every plugin outside the official @deepseek-ai/ catalog in the custom view', async () => {
     const view = render(<PluginInventorySettingsTab {...props(async () => SNAPSHOT, 'custom')} />)
     const search = await screen.findByRole('searchbox', { name: en.search })
 
     expect(screen.getByText(en.customIntro)).toBeTruthy()
     expect(screen.getByRole('heading', { name: en.customCatalog })).toBeTruthy()
-    expect(view.container.querySelector('[data-plugin-count]')?.textContent).toBe('2')
-    expect(screen.getAllByRole('listitem')).toHaveLength(2)
+    // 9 fixture entries minus the 2 official @deepseek-ai/ rows (hmr, directory-picker-native).
+    expect(view.container.querySelector('[data-plugin-count]')?.textContent).toBe('7')
+    expect(screen.getAllByRole('listitem')).toHaveLength(7)
     expect(screen.getByText('paddle-ocr')).toBeTruthy()
     expect(screen.getByText('ui-skin-pokemon')).toBeTruthy()
+    expect(screen.getByText('pending-name')).toBeTruthy()
     expect(screen.queryByText('hmr')).toBeNull()
+    expect(screen.queryByText('directory-picker-native')).toBeNull()
 
     fireEvent.change(search, { target: { value: 'pokemon' } })
     expect(screen.getAllByRole('listitem')).toHaveLength(1)
@@ -121,9 +124,9 @@ describe('PluginInventorySettingsTab', () => {
     expect(screen.getByText(en.emptySearch)).toBeTruthy()
   })
 
-  it('shows the custom empty state when only built-in plugins exist', async () => {
+  it('shows the custom empty state when only official plugins exist', async () => {
     const builtIns = {
-      entries: SNAPSHOT.entries.filter(entry => !entry.moduleName.startsWith('@dsh-external/')),
+      entries: SNAPSHOT.entries.filter(entry => entry.moduleName.startsWith('@deepseek-ai/')),
     } as Snapshot
     render(<PluginInventorySettingsTab {...props(async () => builtIns, 'custom')} />)
 
